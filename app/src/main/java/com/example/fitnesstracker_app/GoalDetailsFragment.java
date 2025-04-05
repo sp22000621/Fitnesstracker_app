@@ -1,12 +1,9 @@
 package com.example.fitnesstracker_app;
 
 import android.app.DatePickerDialog;
+import android.content.ContentValues;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.fragment.app.Fragment;
-
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,6 +12,10 @@ import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
 
 import java.util.Calendar;
 
@@ -25,6 +26,7 @@ public class GoalDetailsFragment extends Fragment {
     private Button pickDateBtn;
     private Button saveBtn;
     private String selectedDate = "";
+    private GoalDatabaseHelper dbHelper;
 
     public GoalDetailsFragment() {}
 
@@ -43,6 +45,8 @@ public class GoalDetailsFragment extends Fragment {
         pickDateBtn = view.findViewById(R.id.btn_pick_date);
         saveBtn = view.findViewById(R.id.btn_save_goal);
 
+        dbHelper = new GoalDatabaseHelper(getContext());
+
         pickDateBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -59,17 +63,37 @@ public class GoalDetailsFragment extends Fragment {
                     return;
                 }
 
-                GoalManager.getInstance().addGoal(new Goal(name, selectedDate));
-                Toast.makeText(getContext(), "Goal saved", Toast.LENGTH_SHORT).show();
+                saveGoalToDatabase(name, selectedDate);
 
-                // Go back to the list fragment
                 requireActivity().getSupportFragmentManager()
                         .beginTransaction()
                         .replace(R.id.fragment_container, new GoalListFragment())
-                        .addToBackStack(null) // Optional: Add to back stack for navigation
+                        .addToBackStack(null)
                         .commit();
             }
         });
+    }
+
+    private void saveGoalToDatabase(String name, String deadline) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+
+        if (db != null) {
+            ContentValues values = new ContentValues();
+            values.put(GoalDatabaseHelper.COLUMN_NAME, name);
+            values.put(GoalDatabaseHelper.COLUMN_DEADLINE, deadline);
+
+            long newRowId = db.insert(GoalDatabaseHelper.TABLE_GOALS, null, values);
+
+            if (newRowId != -1) {
+                Toast.makeText(getContext(), "Goal saved to database", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(getContext(), "Error saving goal", Toast.LENGTH_SHORT).show();
+            }
+
+            db.close();
+        } else {
+            Toast.makeText(getContext(), "Could not open database", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void showDatePicker() {
@@ -90,5 +114,13 @@ public class GoalDetailsFragment extends Fragment {
                 y, m, d
         );
         dialog.show();
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (dbHelper != null) {
+            dbHelper.close();
+        }
     }
 }

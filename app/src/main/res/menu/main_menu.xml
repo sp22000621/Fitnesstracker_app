@@ -10,4 +10,8 @@
         android:title="Clear All Goals"
         android:icon="@android:drawable/ic_menu_delete"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/menu_sort_order"
+        android:title="Sort Order"
+        app:showAsAction="never" />
 </menu>
